@@ -188,6 +188,88 @@ async def execute_python(code: str) -> str:
         return error_msg
 
 # =============================================================================
+# HELPER FUNCTIONS
+# =============================================================================
+
+def extract_agent_response_text(agent_response: Any) -> str:
+    """
+    Extract text content from agent response, handling various formats:
+    - JSON-RPC response: {"result": {"content": [{"type": "text", "text": "..."}], "structuredContent": {"result": "..."}}}
+    - Plain string: "text"
+    - Dict with content: {"content": "...", "text": "..."}
+    - None: returns empty string
+    
+    Args:
+        agent_response: The raw agent response in any format
+        
+    Returns:
+        str: Extracted text content, or empty string if not found
+    """
+    if agent_response is None:
+        logger.debug("extract_agent_response_text: agent_response is None")
+        return ""
+    
+    # If it's already a string, return it
+    if isinstance(agent_response, str):
+        logger.debug(f"extract_agent_response_text: agent_response is string, length: {len(agent_response)}")
+        return agent_response
+    
+    # If it's a dict, try to extract text from various possible structures
+    if isinstance(agent_response, dict):
+        logger.debug(f"extract_agent_response_text: agent_response is dict with keys: {list(agent_response.keys())}")
+        
+        # Try JSON-RPC result.content[0].text structure
+        if "result" in agent_response:
+            result = agent_response["result"]
+            if isinstance(result, dict):
+                # Try content array
+                if "content" in result and isinstance(result["content"], list) and len(result["content"]) > 0:
+                    first_content = result["content"][0]
+                    if isinstance(first_content, dict) and "text" in first_content:
+                        text = str(first_content["text"])
+                        logger.debug(f"extract_agent_response_text: extracted from result.content[0].text, length: {len(text)}")
+                        return text
+                
+                # Try structuredContent.result
+                if "structuredContent" in result:
+                    structured = result["structuredContent"]
+                    if isinstance(structured, dict) and "result" in structured:
+                        text = str(structured["result"])
+                        logger.debug(f"extract_agent_response_text: extracted from result.structuredContent.result, length: {len(text)}")
+                        return text
+        
+        # Try direct content array
+        if "content" in agent_response and isinstance(agent_response["content"], list) and len(agent_response["content"]) > 0:
+            first_content = agent_response["content"][0]
+            if isinstance(first_content, dict) and "text" in first_content:
+                text = str(first_content["text"])
+                logger.debug(f"extract_agent_response_text: extracted from content[0].text, length: {len(text)}")
+                return text
+        
+        # Try structuredContent.result
+        if "structuredContent" in agent_response:
+            structured = agent_response["structuredContent"]
+            if isinstance(structured, dict) and "result" in structured:
+                text = str(structured["result"])
+                logger.debug(f"extract_agent_response_text: extracted from structuredContent.result, length: {len(text)}")
+                return text
+        
+        # Try direct text/content keys
+        if "text" in agent_response:
+            text = str(agent_response["text"])
+            logger.debug(f"extract_agent_response_text: extracted from text key, length: {len(text)}")
+            return text
+        if "content" in agent_response and isinstance(agent_response["content"], str):
+            text = str(agent_response["content"])
+            logger.debug(f"extract_agent_response_text: extracted from content string, length: {len(text)}")
+            return text
+    
+    # Fallback: convert to string
+    text = str(agent_response)
+    logger.debug(f"extract_agent_response_text: fallback to str(), length: {len(text)}")
+    return text
+
+# =============================================================================
 # SCENARIOS - Define prompts and evaluation logic
 # =============================================================================
 
@@ -265,17 +347,11 @@ Use the `execute_python` tool to run your Python code.
     # Evaluate the response by checking for numerical quality values
     import re
     
-    # Handle None or empty response
-    if agent_response is None:
-        logger.warning("Agent response is None - agent may not have submitted final answer")
-        yield 0.0
-        return
-    
-    # Convert to string if needed
-    response_text = str(agent_response) if not isinstance(agent_response, str) else agent_response
+    # Extract text from response (handles JSON-RPC, dict, string, etc.)
+    response_text = extract_agent_response_text(agent_response)
     
     if not response_text or len(response_text.strip()) == 0:
-        logger.warning("Agent response is empty")
+        logger.warning(f"Agent response is empty or could not be extracted. Raw response: {agent_response}")
         yield 0.0
         return
     
@@ -365,15 +441,11 @@ Use the `execute_python` tool to run your Python code.
     # Evaluate: check for feature name, correlation value, and direction
     import re
     
-    # Handle None or empty response
-    if agent_response is None:
-        logger.warning("Agent response is None - agent may not have submitted final answer")
-        yield 0.0
-        return
+    # Extract text from response (handles JSON-RPC, dict, string, etc.)
+    response_text = extract_agent_response_text(agent_response)
     
-    response_text = str(agent_response) if not isinstance(agent_response, str) else agent_response
     if not response_text or len(response_text.strip()) == 0:
-        logger.warning("Agent response is empty")
+        logger.warning(f"Agent response is empty or could not be extracted. Raw response: {agent_response}")
         yield 0.0
         return
     
@@ -462,22 +534,27 @@ Use the `execute_python` tool to run your Python code.
 - Example: execute_python(code="import pandas as pd\ndf = pd.read_csv('file.csv')\nprint(df.describe())")
 - DO NOT pass a dictionary or object - only a string!
 
-**IMPORTANT**: Provide your final answer with all five statistics as specific numerical values."""
+**CRITICAL - Final Answer Required**: 
+After completing all your tool calls and analysis, you MUST provide a final text answer summarizing your findings. This is REQUIRED - do not just make tool calls and stop. You must send a final text message (not just tool outputs) that includes:
+1. The combined dataset shape
+2. The model type used
+3. Training and test set sizes
+4. Model accuracy on test set
+5. Top 3 most important features (if applicable)
+6. A brief interpretation of the results
+
+Do not just show tool outputs - provide a clear summary with specific numerical values in your final message."""
 
     agent_response = yield prompt
     
     # Evaluate: check for all 5 statistics
     import re
     
-    # Handle None or empty response
-    if agent_response is None:
-        logger.warning("Agent response is None - agent may not have submitted final answer")
-        yield 0.0
-        return
+    # Extract text from response (handles JSON-RPC, dict, string, etc.)
+    response_text = extract_agent_response_text(agent_response)
     
-    response_text = str(agent_response) if not isinstance(agent_response, str) else agent_response
     if not response_text or len(response_text.strip()) == 0:
-        logger.warning("Agent response is empty")
+        logger.warning(f"Agent response is empty or could not be extracted. Raw response: {agent_response}")
         yield 0.0
         return
     
@@ -568,15 +645,11 @@ Use the `execute_python` tool to run your Python code.
     # Evaluate: check for count, total, and percentage
     import re
     
-    # Handle None or empty response
-    if agent_response is None:
-        logger.warning("Agent response is None - agent may not have submitted final answer")
-        yield 0.0
-        return
+    # Extract text from response (handles JSON-RPC, dict, string, etc.)
+    response_text = extract_agent_response_text(agent_response)
     
-    response_text = str(agent_response) if not isinstance(agent_response, str) else agent_response
     if not response_text or len(response_text.strip()) == 0:
-        logger.warning("Agent response is empty")
+        logger.warning(f"Agent response is empty or could not be extracted. Raw response: {agent_response}")
         yield 0.0
         return
     
@@ -595,8 +668,8 @@ Use the `execute_python` tool to run your Python code.
     has_total = any(word in response_lower for word in ['total', 'all wines', 'dataset', 'all samples'])
     has_percentage = any(word in response_lower for word in ['percent', '%', 'percentage', 'pct'])
     has_threshold_mention = (str(threshold) in response_text or 
-                            f">= {threshold}" in agent_response or
-                            f">={threshold}" in agent_response or
+                            f">= {threshold}" in response_text or
+                            f">={threshold}" in response_text or
                             f"greater than or equal to {threshold}" in response_lower)
     
     # Should have at least 2 integers (count and total) and at least 1 number for percentage
@@ -733,6 +806,9 @@ Your solution will be evaluated based on:
 
 Use the `execute_python` tool to execute your code step by step. You may need multiple tool calls to complete this task.
 
+**MANDATORY - Final Summary Required:**
+After completing all tool calls and getting results, you MUST send a final text message (not just tool outputs) that summarizes your findings. This final message is REQUIRED for evaluation. Include all the information listed in "expected_output" above in your final text response.
+
 **CRITICAL - Tool Calling Format:**
 - The `code` parameter MUST be a STRING containing your Python code
 - Pass the entire code block as a single string value
@@ -745,15 +821,17 @@ Use the `execute_python` tool to execute your code step by step. You may need mu
     # Evaluate the response - check for all required components
     import re
     
-    # Handle None or empty response
-    if agent_response is None:
-        logger.warning("Agent response is None - agent may not have submitted final answer")
-        yield 0.0
-        return
+    # Log the raw response for debugging
+    logger.info(f"[predict-wine-quality-ml] Raw agent_response type: {type(agent_response)}, value: {repr(agent_response)[:500] if agent_response else 'None'}")
     
-    response_text = str(agent_response) if not isinstance(agent_response, str) else agent_response
+    # Extract text from response (handles JSON-RPC, dict, string, etc.)
+    response_text = extract_agent_response_text(agent_response)
+    
+    logger.info(f"[predict-wine-quality-ml] Extracted response_text (length: {len(response_text) if response_text else 0}): {response_text[:200] if response_text else 'None'}...")
+    
     if not response_text or len(response_text.strip()) == 0:
-        logger.warning("Agent response is empty")
+        logger.warning(f"[predict-wine-quality-ml] Agent response is empty or could not be extracted. Raw response type: {type(agent_response)}, value: {repr(agent_response)[:500] if agent_response else 'None'}")
+        logger.warning(f"[predict-wine-quality-ml] This usually means the agent didn't call _hud_submit or ctx.submit() with a final answer.")
         yield 0.0
         return
     
@@ -791,7 +869,7 @@ Use the `execute_python` tool to execute your code step by step. You may need mu
         try:
             acc_val = float(accuracy_matches[0])
             # Accept as decimal (0-1) or percentage (0-100)
-            if 0 <= acc_val <= 1 or (0 <= acc_val <= 100 and '%' in agent_response):
+            if 0 <= acc_val <= 1 or (0 <= acc_val <= 100 and '%' in response_text):
                 has_accuracy_value = True
         except:
             pass

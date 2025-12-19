@@ -52,5 +52,20 @@
             "description": "Identify wines with quality >= 7.0 and calculate percentage",
             "difficulty": "medium"
         }
+    },
+    {
+        "id": "predict_quality_rf_001",
+        "env": {
+            "name": "data_science_tutorial"
+        },
+        "scenario": "predict-wine-quality-ml",
+        "args": {
+            "model_type": "random_forest",
+            "test_size": 0.2
+        },
+        "metadata": {
+            "description": "Build a random forest model to predict wine quality with 20% test split",
+            "difficulty": "hard"
+        }
     }
 ]
