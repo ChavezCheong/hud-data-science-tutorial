@@ -1,0 +1,56 @@
+[
+    {
+        "id": "compare_wine_quality_001",
+        "env": {
+            "name": "data_science_tutorial"
+        },
+        "scenario": "compare-wine-quality",
+        "args": {},
+        "metadata": {
+            "description": "Compare average quality scores between red and white wines",
+            "difficulty": "easy"
+        }
+    },
+    {
+        "id": "find_correlation_001",
+        "env": {
+            "name": "data_science_tutorial"
+        },
+        "scenario": "find-quality-correlation",
+        "args": {},
+        "metadata": {
+            "description": "Find which feature has the strongest correlation with wine quality",
+            "difficulty": "medium"
+        }
+    },
+    {
+        "id": "calculate_stats_alcohol_001",
+        "env": {
+            "name": "data_science_tutorial"
+        },
+        "scenario": "calculate-statistics",
+        "args": {
+            "feature": "alcohol",
+            "dataset": "red"
+        },
+        "metadata": {
+            "description": "Calculate mean, median, std dev, min, and max for alcohol in red wine",
+            "difficulty": "easy"
+        }
+    },
+    {
+        "id": "identify_high_quality_001",
+        "env": {
+            "name": "data_science_tutorial"
+        },
+        "scenario": "identify-high-quality-wines",
+        "args": {
+            "threshold": 7.0,
+            "dataset": "red"
+        },
+        "metadata": {
+            "description": "Identify wines with quality >= 7.0 and calculate percentage",
+            "difficulty": "medium"
+        }
+    }
+]

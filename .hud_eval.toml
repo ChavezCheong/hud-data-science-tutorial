@@ -1,0 +1,45 @@
+# HUD Eval Configuration
+# Command-line arguments override these settings
+
+[eval]
+# source = "hud-evals/SheetBench-50"
+# agent = "claude"
+# full = false
+# max_concurrent = 30
+max_steps = 40
+# group_size = 1
+# task_ids = ["task_1", "task_2"]
+# verbose = true
+# very_verbose = true
+# auto_respond = true
+# gateway = false  # Route LLM API calls through HUD Gateway
+
+[agent]
+# allowed_tools = ["computer", "playwright"]
+# disallowed_tools = []
+
+[claude]
+# model = "claude-sonnet-4-5"
+# max_tokens = 16384
+# use_computer_beta = true
+
+[openai]
+# model = "gpt-4o"
+# temperature = 0.7
+# max_output_tokens = 4096
+
+[gemini]
+# model = "gemini-2.5-pro"
+# temperature = 1.0
+# top_p = 0.95
+
+[gemini_cua]
+# model = "gemini-2.5-computer-use-preview"
+# temperature = 1.0
+# top_p = 0.95
+# excluded_predefined_functions = []
+
+[openai_compatible]
+base_url = "https://openrouter.ai/api/v1"
+model = "qwen/qwen3-max"
+api_key = "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"

@@ -1,0 +1,37 @@
+FROM public.ecr.aws/docker/library/python:3.11-bookworm
+
+USER root
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Step 1: Install dependencies from pyproject.toml
+COPY pyproject.toml ./
+RUN pip install --no-cache-dir .
+
+# Step 2: Copy source code
+COPY env.py ./
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH=/app \
+    HUD_LOG_STREAM="stderr"
+
+# Download Wine Quality (UCI) into /app/data/wine_quality
+RUN mkdir -p /app/data/wine_quality && \
+    wget -q https://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv \
+      -O /app/data/wine_quality/winequality-red.csv && \
+    wget -q https://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-white.csv \
+      -O /app/data/wine_quality/winequality-white.csv && \
+    wget -q https://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality.names \
+      -O /app/data/wine_quality/winequality.names
+
+# Expose Jupyter kernel gateway port
+EXPOSE 8888
+
+# Start the kernel gateway in background, then start the environment
+CMD ["sh", "-c", "jupyter kernelgateway --KernelGatewayApp.ip=0.0.0.0 --KernelGatewayApp.port=8888 >&2 & sleep 5 && python env.py"]
