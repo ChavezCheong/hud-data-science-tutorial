@@ -19,6 +19,7 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+uv.lock
 
 # Virtual environments
 .venv/
@@ -35,6 +36,8 @@ env/
 
 # HUD specific
 hud.lock.yaml
+.hud_eval.toml
+!.hud_eval.toml.example
 
 # Environment variables
 .env

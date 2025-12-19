@@ -62,7 +62,7 @@ async def run_evaluation():
     
     print(f"Loaded {len(tasks)} task(s).")
 
-    # 3. Run evaluation with qwen/qwen3-max agent
+    # 3. Run evaluation with qwen/qwen3-coder agent
     async with hud.eval(tasks) as ctx:
         # Get API key from environment variable
         api_key = os.getenv("OPENROUTER_API_KEY")
@@ -74,13 +74,13 @@ async def run_evaluation():
         
         # Create an agent using OpenAIChatAgent with qwen configuration
         agent = OpenAIChatAgent.create(
-            model="qwen/qwen3-max",
+            model="qwen/qwen3-coder",
             base_url="https://openrouter.ai/api/v1",
             api_key=api_key
         )
         
         print(f"Starting evaluation with agent: {agent.__class__.__name__}")
-        print(f"Model: qwen/qwen3-max")
+        print(f"Model: qwen/qwen3-coder")
         print(f"Base URL: https://openrouter.ai/api/v1")
         print("-" * 60)
         

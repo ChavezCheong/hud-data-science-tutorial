@@ -142,6 +142,8 @@ async def execute_python(code: str) -> str:
     """
     Execute Python code in the Jupyter kernel.
     
+    IMPORTANT: The 'code' parameter must be a STRING containing Python code, not a dictionary or object.
+    
     Use this tool to run data science operations like:
     - Loading and exploring datasets
     - Performing data analysis
@@ -149,16 +151,41 @@ async def execute_python(code: str) -> str:
     - Running machine learning models
     
     Args:
-        code: Python code to execute in the Jupyter kernel
+        code (str): Python code to execute as a single string. The entire code block should be passed as one string.
         
     Returns:
-        The output from executing the code
+        str: The output from executing the code
+        
+    Example:
+        Correct usage:
+        execute_python(code="import pandas as pd\ndf = pd.read_csv('file.csv')\nprint(df.head())")
+        
+        Wrong usage (DO NOT DO THIS):
+        execute_python(code={"file": "data.csv"})  # This is incorrect!
     """
+    # Validate that code is actually a string
+    if not isinstance(code, str):
+        error_msg = (
+            f"ERROR: The 'code' parameter must be a STRING, but received {type(code).__name__}. "
+            f"Please pass your Python code as a string. Example: execute_python(code='import pandas as pd')"
+        )
+        logger.error(error_msg)
+        return error_msg
+    
+    # Check if code is empty
+    if not code.strip():
+        return "ERROR: The 'code' parameter cannot be empty. Please provide Python code to execute."
+    
     await start_gateway_if_needed()
-    results = await jupyter_tool(code)
-    # Combine all output blocks into a single string
-    output = "".join([getattr(b, "text", "") or str(b) for b in results]).strip()
-    return output
+    try:
+        results = await jupyter_tool(code)
+        # Combine all output blocks into a single string
+        output = "".join([getattr(b, "text", "") or str(b) for b in results]).strip()
+        return output
+    except Exception as e:
+        error_msg = f"Error executing code: {str(e)}"
+        logger.error(error_msg)
+        return error_msg
 
 # =============================================================================
 # SCENARIOS - Define prompts and evaluation logic
@@ -176,14 +203,24 @@ async def compare_wine_quality():
     
     prompt = f"""You are a data scientist who can analyze datasets through Python code using Jupyter notebooks.
 
+**CRITICAL - File Locations:**
+The CSV files are stored at fixed absolute paths. Use these paths EXACTLY as provided below - do not search directories or try to find files. Simply use the paths directly in pd.read_csv().
+
 You need to solve the following data analysis question:
 
 ### instruction
 Compare the average quality scores between red and white wines. Determine which wine type has a higher average quality score and report the exact average quality value for each type.
 
 ### dataset_paths
-- Red wine dataset: {red_path}
-- White wine dataset: {white_path}
+The CSV files are located at these EXACT paths:
+- Red wine dataset: `{red_path}`
+- White wine dataset: `{white_path}`
+
+**IMPORTANT - File Path Usage:**
+- These are ABSOLUTE paths - use them exactly as shown
+- Use these paths directly in pd.read_csv() - no need to search for files
+- Example code: `df_red = pd.read_csv('{red_path}')`
+- Example code: `df_white = pd.read_csv('{white_path}')`
 
 ### dataset_info
 The wine quality dataset contains physicochemical properties of wines and their quality ratings.
@@ -208,10 +245,18 @@ Your final answer should clearly state:
 3. Which wine type has higher average quality
 
 The solution can be generated through multiple rounds of interaction. You can do two types of actions:
-1. **Data exploration**: Generate Python code to load and explore the datasets. The execution results will be provided to you.
+1. **Data exploration**: Generate Python code to load and explore the datasets using the exact paths: `pd.read_csv('{red_path}')` and `pd.read_csv('{white_path}')`. The execution results will be provided to you.
 2. **Analysis and calculation**: Generate Python code to calculate the average quality for each wine type and compare them.
 
+### tool_usage
 Use the `execute_python` tool to run your Python code.
+
+**CRITICAL - Tool Calling Format:**
+- The `code` parameter MUST be a STRING containing your Python code
+- Pass the entire code block as a single string value
+- Use newlines (\n) or triple quotes for multi-line code
+- Example: execute_python(code="import pandas as pd\ndf = pd.read_csv('file.csv')\nprint(df.head())")
+- DO NOT pass a dictionary or object - only a string!
 
 **IMPORTANT**: Provide your final answer with specific numerical values, not just descriptions."""
 
@@ -264,7 +309,13 @@ You need to solve the following data analysis question:
 Find which physicochemical property (feature) has the strongest correlation with wine quality. Calculate the correlation coefficient between each feature and the quality score, then identify the feature with the highest absolute correlation value.
 
 ### dataset_path
-{red_path}
+The CSV file is located at this EXACT path:
+`{red_path}`
+
+**IMPORTANT - File Path Usage:**
+- This is an ABSOLUTE path - use it exactly as shown
+- Use this path directly in pd.read_csv() - no need to search for files
+- Example code: `df = pd.read_csv('{red_path}')`
 
 ### dataset_info
 The red wine quality dataset contains the following features:
@@ -279,11 +330,19 @@ Your final answer should clearly state:
 3. Whether the correlation is positive or negative
 
 The solution can be generated through multiple rounds of interaction:
-1. **Data loading and exploration**: Generate Python code to load the dataset and examine its structure.
+1. **Data loading and exploration**: Generate Python code to load the dataset using the exact path: `pd.read_csv('{red_path}')` and examine its structure.
 2. **Correlation calculation**: Generate Python code to calculate correlation coefficients between all features and the quality column.
 3. **Result identification**: Identify the feature with the highest absolute correlation.
 
-Use the `execute_python` tool to run your Python code.
+### tool_usage
+Use the `execute_python` tool to run your Python code. 
+
+**CRITICAL - Tool Calling Format:**
+- The `code` parameter MUST be a STRING containing your Python code
+- Pass the entire code block as a single string value
+- Use newlines (\n) or triple quotes for multi-line code
+- Example: execute_python(code="import pandas as pd\ndf = pd.read_csv('file.csv')\nprint(df.head())")
+- DO NOT pass a dictionary or object - only a string!
 
 **IMPORTANT**: Provide your final answer with the specific feature name and its correlation coefficient value."""
 
@@ -343,7 +402,13 @@ Calculate and report the following statistics for the '{feature}' feature in the
 - Maximum value
 
 ### dataset_path
-{file_path}
+The CSV file is located at this EXACT path:
+`{file_path}`
+
+**IMPORTANT - File Path Usage:**
+- This is an ABSOLUTE path - use it exactly as shown
+- Use this path directly in pd.read_csv() - no need to search for files
+- Example code: `df = pd.read_csv('{file_path}')`
 
 ### dataset_info
 The wine quality dataset contains physicochemical properties of wines.
@@ -358,10 +423,18 @@ Your final answer should provide all five statistics as numerical values:
 5. Maximum: [value]
 
 The solution can be generated through multiple rounds:
-1. **Data loading**: Generate Python code to load the dataset using pandas.
+1. **Data loading**: Generate Python code to load the dataset using pandas with the exact path: `pd.read_csv('{file_path}')`
 2. **Statistical calculation**: Generate Python code to calculate the required statistics for the '{feature}' column.
 
+### tool_usage
 Use the `execute_python` tool to run your Python code.
+
+**CRITICAL - Tool Calling Format:**
+- The `code` parameter MUST be a STRING containing your Python code
+- Pass the entire code block as a single string value
+- Use newlines (\n) or triple quotes for multi-line code
+- Example: execute_python(code="import pandas as pd\ndf = pd.read_csv('file.csv')\nprint(df.describe())")
+- DO NOT pass a dictionary or object - only a string!
 
 **IMPORTANT**: Provide your final answer with all five statistics as specific numerical values."""
 
@@ -417,7 +490,13 @@ You need to solve the following data analysis question:
 Identify how many wines in the {dataset} wine dataset have a quality score greater than or equal to {threshold}, and calculate what percentage of the total dataset this represents.
 
 ### dataset_path
-{file_path}
+The CSV file is located at this EXACT path:
+`{file_path}`
+
+**IMPORTANT - File Path Usage:**
+- This is an ABSOLUTE path - use it exactly as shown
+- Use this path directly in pd.read_csv() - no need to search for files
+- Example code: `df = pd.read_csv('{file_path}')`
 
 ### dataset_info
 The wine quality dataset contains wine samples with a 'quality' column that ranges from 0 to 10.
@@ -430,11 +509,19 @@ Your final answer should provide:
 3. The percentage of high-quality wines (as a number with 2 decimal places)
 
 The solution can be generated through multiple rounds:
-1. **Data loading**: Generate Python code to load the dataset.
+1. **Data loading**: Generate Python code to load the dataset using the exact path: `pd.read_csv('{file_path}')`
 2. **Filtering and counting**: Generate Python code to filter wines with quality >= {threshold} and count them.
 3. **Percentage calculation**: Calculate the percentage of high-quality wines.
 
+### tool_usage
 Use the `execute_python` tool to run your Python code.
+
+**CRITICAL - Tool Calling Format:**
+- The `code` parameter MUST be a STRING containing your Python code
+- Pass the entire code block as a single string value
+- Use newlines (\n) or triple quotes for multi-line code
+- Example: execute_python(code="import pandas as pd\ndf = pd.read_csv('file.csv')\nhigh_quality = df[df['quality'] >= 7]\nprint(len(high_quality))")
+- DO NOT pass a dictionary or object - only a string!
 
 **IMPORTANT**: Provide your final answer with specific numbers: count of high-quality wines, total count, and percentage."""
 
@@ -471,6 +558,220 @@ Use the `execute_python` tool to run your Python code.
     
     reward = 1.0 if (has_count and has_total and has_percentage and has_threshold_mention and 
                      has_sufficient_numbers and has_valid_percentage) else 0.0
+    yield reward
+
+@env.scenario("predict-wine-quality-ml")
+async def predict_wine_quality_ml(model_type: str = "random_forest", test_size: float = 0.2):
+    """
+    Complex machine learning scenario: Build a model to predict wine quality.
+    
+    This scenario requires multiple iterations:
+    1. Load and combine datasets
+    2. Data preprocessing and feature engineering
+    3. Train-test split
+    4. Model training
+    5. Model evaluation
+    6. Report metrics
+    
+    Args:
+        model_type: Type of model to use ("random_forest", "logistic_regression", or "gradient_boosting")
+        test_size: Proportion of data for testing (default 0.2)
+    """
+    red_path = os.path.join(WINE_QUALITY_PATH, "winequality-red.csv")
+    white_path = os.path.join(WINE_QUALITY_PATH, "winequality-white.csv")
+    
+    prompt = f"""You are a data scientist who can analyze datasets and build machine learning models through Python code using Jupyter notebooks.
+
+**CRITICAL - File Locations:**
+The CSV files are stored at fixed absolute paths. Use these paths EXACTLY as provided below - do not search directories or try to find files. Simply use the paths directly in pd.read_csv().
+
+You need to solve the following machine learning task:
+
+### instruction
+Build a machine learning model to predict wine quality using the physicochemical properties. This is a multi-step process that requires careful data preparation, feature engineering, model training, and evaluation.
+
+### dataset_paths
+The CSV files are located at these EXACT paths:
+- Red wine dataset: `{red_path}`
+- White wine dataset: `{white_path}`
+
+**IMPORTANT - File Path Usage:**
+- These are ABSOLUTE paths - use them exactly as shown
+- Use these paths directly in pd.read_csv() - no need to search for files
+- Example code for loading: `df_red = pd.read_csv('{red_path}')`
+- Example code for loading: `df_white = pd.read_csv('{white_path}')`
+- DO NOT try to search directories or list files - use the paths directly!
+
+### task_requirements
+You must complete the following steps:
+
+**Step 1: Data Loading and Combination**
+- Load both red and white wine datasets using pandas with the exact paths provided above
+- Use these EXACT commands: 
+  ```python
+  import pandas as pd
+  df_red = pd.read_csv('{red_path}')
+  df_white = pd.read_csv('{white_path}')
+  ```
+- Add a 'wine_type' column to distinguish between red (value: 'red') and white (value: 'white') wines
+- Combine both datasets into a single DataFrame using pd.concat()
+- Display the shape and basic info of the combined dataset
+
+**Step 2: Data Preprocessing**
+- Check for missing values and handle them if any exist
+- Examine the distribution of the target variable (quality)
+- Identify and handle any outliers if necessary
+- Display summary statistics
+
+**Step 3: Feature Engineering**
+- Separate features (X) from target (y = quality column)
+- The features should include all physicochemical properties but exclude 'quality'
+- Optionally create new features if beneficial (e.g., ratio features, interactions)
+- Display the feature names and their count
+
+**Step 4: Train-Test Split**
+- Split the data into training and testing sets
+- Use a test size of {test_size} (i.e., {int(test_size * 100)}% for testing)
+- Use random_state=42 for reproducibility
+- Display the shapes of training and testing sets
+
+**Step 5: Model Training**
+- Import and initialize a {model_type} model from scikit-learn
+  - If "random_forest": use RandomForestClassifier with n_estimators=100, random_state=42
+  - If "logistic_regression": use LogisticRegression with max_iter=1000, random_state=42
+  - If "gradient_boosting": use GradientBoostingClassifier with n_estimators=100, random_state=42
+- Train the model on the training data
+- Print a confirmation message that training is complete
+
+**Step 6: Model Evaluation**
+- Make predictions on the test set
+- Calculate and report the following metrics:
+  - Accuracy score
+  - Classification report (precision, recall, F1-score)
+  - Confusion matrix
+- Display these metrics clearly
+
+**Step 7: Feature Importance (if applicable)**
+- If using RandomForest or GradientBoosting, extract and display feature importances
+- Identify the top 3 most important features for predicting quality
+
+### expected_output
+Your final answer should clearly report:
+1. The combined dataset shape (rows, columns)
+2. The model type used: {model_type}
+3. Training set size and test set size
+4. Model accuracy on test set (as a decimal between 0 and 1, or as a percentage)
+5. Top 3 most important features (if applicable) or confirmation that feature importance was analyzed
+6. A brief interpretation of the results
+
+### important_notes
+- This task requires multiple rounds of code execution
+- You may need to iterate and refine your code if errors occur
+### tool_usage
+Use the `execute_python` tool for each step, building upon previous results.
+
+**CRITICAL - Tool Calling Format:**
+- The `code` parameter MUST be a STRING containing your Python code
+- Pass the entire code block as a single string value
+- Use newlines (\n) or triple quotes for multi-line code
+- Example: execute_python(code="import pandas as pd\nimport numpy as np\ndf = pd.read_csv('file.csv')")
+- DO NOT pass a dictionary or object - only a string!
+- Import necessary libraries (pandas, numpy, sklearn) at the beginning
+- Ensure all code is properly structured and handles edge cases
+- The quality column contains integer values (typically 3-9)
+
+### evaluation_criteria
+Your solution will be evaluated based on:
+- Successful data loading and combination
+- Proper preprocessing and feature engineering
+- Correct train-test split
+- Successful model training
+- Complete evaluation metrics
+- Clear reporting of results
+
+Use the `execute_python` tool to execute your code step by step. You may need multiple tool calls to complete this task.
+
+**CRITICAL - Tool Calling Format:**
+- The `code` parameter MUST be a STRING containing your Python code
+- Pass the entire code block as a single string value
+- Use newlines (\n) or triple quotes for multi-line code
+- Example: execute_python(code="import pandas as pd\ndf = pd.read_csv('file.csv')\nprint(df.shape)")
+- DO NOT pass a dictionary or object - only a string!"""
+
+    agent_response = yield prompt
+    
+    # Evaluate the response - check for all required components
+    import re
+    
+    response_lower = agent_response.lower()
+    
+    # Check for data loading and combination
+    has_combined = any(word in response_lower for word in ['combined', 'merge', 'concatenate', 'concat'])
+    has_wine_type = 'wine_type' in response_lower or 'wine type' in response_lower
+    
+    # Check for preprocessing
+    has_preprocessing = any(word in response_lower for word in ['preprocess', 'missing', 'null', 'outlier', 'clean'])
+    
+    # Check for feature engineering
+    has_features = any(word in response_lower for word in ['feature', 'x_train', 'x_test', 'y_train', 'y_test'])
+    has_split = any(word in response_lower for word in ['train_test_split', 'split', 'train', 'test'])
+    
+    # Check for model training
+    model_keywords = {
+        'random_forest': ['randomforest', 'random forest', 'rf'],
+        'logistic_regression': ['logistic', 'logisticregression', 'lr'],
+        'gradient_boosting': ['gradientboosting', 'gradient boosting', 'gb']
+    }
+    has_model = any(keyword in response_lower for keyword in model_keywords.get(model_type, []))
+    has_trained = any(word in response_lower for word in ['train', 'fit', 'trained', 'training'])
+    
+    # Check for evaluation metrics
+    has_accuracy = any(word in response_lower for word in ['accuracy', 'acc'])
+    has_metrics = any(word in response_lower for word in ['precision', 'recall', 'f1', 'f1-score', 'classification report', 'confusion matrix'])
+    
+    # Extract accuracy value (should be between 0 and 1, or as percentage)
+    accuracy_pattern = r'accuracy[:\s]+(\d+\.?\d*)'
+    accuracy_matches = re.findall(accuracy_pattern, response_lower)
+    has_accuracy_value = False
+    if accuracy_matches:
+        try:
+            acc_val = float(accuracy_matches[0])
+            # Accept as decimal (0-1) or percentage (0-100)
+            if 0 <= acc_val <= 1 or (0 <= acc_val <= 100 and '%' in agent_response):
+                has_accuracy_value = True
+        except:
+            pass
+    
+    # Check for feature importance
+    has_importance = any(word in response_lower for word in ['importance', 'important feature', 'top feature'])
+    
+    # Check for dataset shape mention
+    has_shape = any(word in response_lower for word in ['shape', 'rows', 'columns', 'samples'])
+    
+    # Calculate reward based on completeness
+    # This is a complex task, so we'll give partial credit for progress
+    required_components = [
+        has_combined or has_wine_type,  # Data combination
+        has_preprocessing,  # Preprocessing
+        has_features and has_split,  # Feature engineering and split
+        has_model and has_trained,  # Model training
+        has_accuracy and has_metrics,  # Evaluation
+        has_shape  # Dataset info
+    ]
+    
+    # Count how many components are present
+    components_present = sum(required_components)
+    
+    # Full reward if most components are present and accuracy is reported
+    if components_present >= 5 and has_accuracy_value and has_importance:
+        reward = 1.0
+    elif components_present >= 4 and has_accuracy:
+        reward = 0.7  # Partial credit
+    elif components_present >= 3:
+        reward = 0.4  # Some progress
+    else:
+        reward = 0.0
+    
     yield reward
 
 # =============================================================================
