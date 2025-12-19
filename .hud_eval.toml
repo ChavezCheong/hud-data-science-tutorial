@@ -42,4 +42,5 @@ max_steps = 40
 [openai_compatible]
 base_url = "https://openrouter.ai/api/v1"
 model = "qwen/qwen3-max"
-api_key = "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"
+# api_key is loaded from OPENROUTER_API_KEY environment variable
+# Create a .env file with: OPENROUTER_API_KEY=your_key_here

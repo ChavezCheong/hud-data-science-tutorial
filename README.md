@@ -39,6 +39,24 @@ Or using uv:
 uv sync
 ```
 
+### 2. Configure API Keys
+
+Create a `.env` file in the project root:
+
+```bash
+cp .env.example .env
+```
+
+Then edit `.env` and add your OpenRouter API key:
+
+```env
+OPENROUTER_API_KEY=your_actual_api_key_here
+```
+
+Get your API key from: https://openrouter.ai/keys
+
+**Note**: The `.env` file is gitignored and will not be committed to the repository.
+
 ### 2. Build Docker Image
 
 ```bash

@@ -4,9 +4,16 @@ import asyncio
 import logging
 import sys
 import json
+import os
+from pathlib import Path
+from dotenv import load_dotenv
 import hud
 from hud.agents import OpenAIChatAgent
 from env import env
+
+# Load environment variables from .env file
+env_path = Path(__file__).parent / ".env"
+load_dotenv(env_path)
 
 # Configure logging
 logging.basicConfig(
@@ -57,12 +64,19 @@ async def run_evaluation():
 
     # 3. Run evaluation with qwen/qwen3-max agent
     async with hud.eval(tasks) as ctx:
+        # Get API key from environment variable
+        api_key = os.getenv("OPENROUTER_API_KEY")
+        if not api_key:
+            raise ValueError(
+                "OPENROUTER_API_KEY not found. Please create a .env file with your API key.\n"
+                "See .env.example for reference."
+            )
+        
         # Create an agent using OpenAIChatAgent with qwen configuration
-        # Configuration from .hud_eval.toml
         agent = OpenAIChatAgent.create(
             model="qwen/qwen3-max",
             base_url="https://openrouter.ai/api/v1",
-            api_key="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"
+            api_key=api_key
         )
         
         print(f"Starting evaluation with agent: {agent.__class__.__name__}")
