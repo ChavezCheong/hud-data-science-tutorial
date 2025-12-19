@@ -673,7 +673,7 @@ You must complete the following steps:
 
 **Step 4: Train-Test Split**
 - Split the data into training and testing sets
-- Use a test size of {test_size} (i.e., {int(test_size * 100)}% for testing)
+- Use a test size of {test_size} (i.e., {int(float(test_size) * 100)}% for testing)
 - Use random_state=42 for reproducibility
 - Display the shapes of training and testing sets
 
