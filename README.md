@@ -11,7 +11,6 @@ A HUD v5 environment for data science tutorials using Jupyter notebooks. This en
   - Finding correlations between features and quality
   - Calculating statistical measures
   - Identifying high-quality wines
-  - **Machine Learning**: Building ML models to predict wine quality (complex, multi-step)
 
 ## Project Structure
 
@@ -111,18 +110,6 @@ Calculate mean, median, standard deviation, min, and max for a specified feature
 
 ### 4. identify-high-quality-wines
 Identify wines above a quality threshold and calculate the percentage.
-
-### 5. predict-wine-quality-ml (Complex)
-Build a complete machine learning pipeline to predict wine quality:
-- Load and combine red and white wine datasets
-- Data preprocessing and feature engineering
-- Train-test split
-- Train a scikit-learn model (RandomForest, LogisticRegression, or GradientBoosting)
-- Evaluate model performance with accuracy, precision, recall, F1-score
-- Analyze feature importance
-- Report comprehensive results
-
-**This scenario requires multiple iterations and is designed to test the agent's ability to handle complex, multi-step data science workflows.**
 
 ## Dataset
 

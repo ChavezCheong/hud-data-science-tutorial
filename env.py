@@ -203,9 +203,6 @@ async def compare_wine_quality():
     
     prompt = f"""You are a data scientist who can analyze datasets through Python code using Jupyter notebooks.
 
-**CRITICAL - File Locations:**
-The CSV files are stored at fixed absolute paths. Use these paths EXACTLY as provided below - do not search directories or try to find files. Simply use the paths directly in pd.read_csv().
-
 You need to solve the following data analysis question:
 
 ### instruction
@@ -258,15 +255,32 @@ Use the `execute_python` tool to run your Python code.
 - Example: execute_python(code="import pandas as pd\ndf = pd.read_csv('file.csv')\nprint(df.head())")
 - DO NOT pass a dictionary or object - only a string!
 
-**IMPORTANT**: Provide your final answer with specific numerical values, not just descriptions."""
+**IMPORTANT**: 
+1. After running your code and getting results, you MUST provide a final text answer summarizing your findings
+2. Your final answer should include specific numerical values, not just descriptions
+3. Make sure to submit your final answer - do not just show tool outputs"""
 
     agent_response = yield prompt
     
     # Evaluate the response by checking for numerical quality values
     import re
     
+    # Handle None or empty response
+    if agent_response is None:
+        logger.warning("Agent response is None - agent may not have submitted final answer")
+        yield 0.0
+        return
+    
+    # Convert to string if needed
+    response_text = str(agent_response) if not isinstance(agent_response, str) else agent_response
+    
+    if not response_text or len(response_text.strip()) == 0:
+        logger.warning("Agent response is empty")
+        yield 0.0
+        return
+    
     # Extract all numbers (integers and floats)
-    numbers = re.findall(r'-?\d+\.\d+|-\d+|\d+', agent_response)
+    numbers = re.findall(r'-?\d+\.\d+|-\d+|\d+', response_text)
     # Convert to floats, filter valid quality scores (typically 3-9 for wine quality)
     quality_values = []
     for num_str in numbers:
@@ -279,7 +293,7 @@ Use the `execute_python` tool to run your Python code.
             continue
     
     # Check if response contains both red and white wine quality mentions
-    response_lower = agent_response.lower()
+    response_lower = response_text.lower()
     has_red = any(word in response_lower for word in ['red', 'red wine'])
     has_white = any(word in response_lower for word in ['white', 'white wine'])
     has_comparison = any(word in response_lower for word in ['higher', 'greater', 'better', 'more', 'compare', 'compared'])
@@ -351,8 +365,20 @@ Use the `execute_python` tool to run your Python code.
     # Evaluate: check for feature name, correlation value, and direction
     import re
     
+    # Handle None or empty response
+    if agent_response is None:
+        logger.warning("Agent response is None - agent may not have submitted final answer")
+        yield 0.0
+        return
+    
+    response_text = str(agent_response) if not isinstance(agent_response, str) else agent_response
+    if not response_text or len(response_text.strip()) == 0:
+        logger.warning("Agent response is empty")
+        yield 0.0
+        return
+    
     # Extract correlation coefficients (numbers between -1 and 1)
-    numbers = re.findall(r'-?\d+\.\d+|-\d+|\d+', agent_response)
+    numbers = re.findall(r'-?\d+\.\d+|-\d+|\d+', response_text)
     correlation_values = []
     for num_str in numbers:
         try:
@@ -366,7 +392,7 @@ Use the `execute_python` tool to run your Python code.
     has_correlation_value = len(correlation_values) > 0
     
     # Check for feature names (common features that correlate with quality)
-    response_lower = agent_response.lower()
+    response_lower = response_text.lower()
     feature_names = ['alcohol', 'sulphates', 'volatile acidity', 'citric acid', 'residual sugar', 
                      'chlorides', 'density', 'ph', 'fixed acidity', 'sulfur dioxide', 'free sulfur',
                      'total sulfur', 'sulphate']
@@ -443,10 +469,22 @@ Use the `execute_python` tool to run your Python code.
     # Evaluate: check for all 5 statistics
     import re
     
-    response_lower = agent_response.lower()
+    # Handle None or empty response
+    if agent_response is None:
+        logger.warning("Agent response is None - agent may not have submitted final answer")
+        yield 0.0
+        return
+    
+    response_text = str(agent_response) if not isinstance(agent_response, str) else agent_response
+    if not response_text or len(response_text.strip()) == 0:
+        logger.warning("Agent response is empty")
+        yield 0.0
+        return
+    
+    response_lower = response_text.lower()
     
     # Extract all numbers
-    numbers = re.findall(r'-?\d+\.\d+|-\d+|\d+', agent_response)
+    numbers = re.findall(r'-?\d+\.\d+|-\d+|\d+', response_text)
     numeric_values = []
     for num_str in numbers:
         try:
@@ -530,11 +568,23 @@ Use the `execute_python` tool to run your Python code.
     # Evaluate: check for count, total, and percentage
     import re
     
-    response_lower = agent_response.lower()
+    # Handle None or empty response
+    if agent_response is None:
+        logger.warning("Agent response is None - agent may not have submitted final answer")
+        yield 0.0
+        return
+    
+    response_text = str(agent_response) if not isinstance(agent_response, str) else agent_response
+    if not response_text or len(response_text.strip()) == 0:
+        logger.warning("Agent response is empty")
+        yield 0.0
+        return
+    
+    response_lower = response_text.lower()
     
     # Extract integers (for counts) and floats (for percentage)
-    integers = re.findall(r'\d+', agent_response)
-    decimals = re.findall(r'\d+\.\d+', agent_response)
+    integers = re.findall(r'\d+', response_text)
+    decimals = re.findall(r'\d+\.\d+', response_text)
     
     # Convert to numbers
     int_values = [int(x) for x in integers if x.isdigit()]
@@ -544,7 +594,7 @@ Use the `execute_python` tool to run your Python code.
     has_count = any(word in response_lower for word in ['count', 'number', 'wines', 'samples'])
     has_total = any(word in response_lower for word in ['total', 'all wines', 'dataset', 'all samples'])
     has_percentage = any(word in response_lower for word in ['percent', '%', 'percentage', 'pct'])
-    has_threshold_mention = (str(threshold) in agent_response or 
+    has_threshold_mention = (str(threshold) in response_text or 
                             f">= {threshold}" in agent_response or
                             f">={threshold}" in agent_response or
                             f"greater than or equal to {threshold}" in response_lower)
@@ -582,9 +632,6 @@ async def predict_wine_quality_ml(model_type: str = "random_forest", test_size: 
     
     prompt = f"""You are a data scientist who can analyze datasets and build machine learning models through Python code using Jupyter notebooks.
 
-**CRITICAL - File Locations:**
-The CSV files are stored at fixed absolute paths. Use these paths EXACTLY as provided below - do not search directories or try to find files. Simply use the paths directly in pd.read_csv().
-
 You need to solve the following machine learning task:
 
 ### instruction
@@ -607,12 +654,7 @@ You must complete the following steps:
 
 **Step 1: Data Loading and Combination**
 - Load both red and white wine datasets using pandas with the exact paths provided above
-- Use these EXACT commands: 
-  ```python
-  import pandas as pd
-  df_red = pd.read_csv('{red_path}')
-  df_white = pd.read_csv('{white_path}')
-  ```
+- Use: `df_red = pd.read_csv('{red_path}')` and `df_white = pd.read_csv('{white_path}')`
 - Add a 'wine_type' column to distinguish between red (value: 'red') and white (value: 'white') wines
 - Combine both datasets into a single DataFrame using pd.concat()
 - Display the shape and basic info of the combined dataset
@@ -703,7 +745,19 @@ Use the `execute_python` tool to execute your code step by step. You may need mu
     # Evaluate the response - check for all required components
     import re
     
-    response_lower = agent_response.lower()
+    # Handle None or empty response
+    if agent_response is None:
+        logger.warning("Agent response is None - agent may not have submitted final answer")
+        yield 0.0
+        return
+    
+    response_text = str(agent_response) if not isinstance(agent_response, str) else agent_response
+    if not response_text or len(response_text.strip()) == 0:
+        logger.warning("Agent response is empty")
+        yield 0.0
+        return
+    
+    response_lower = response_text.lower()
     
     # Check for data loading and combination
     has_combined = any(word in response_lower for word in ['combined', 'merge', 'concatenate', 'concat'])

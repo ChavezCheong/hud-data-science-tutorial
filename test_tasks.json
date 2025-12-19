@@ -52,20 +52,5 @@
             "description": "Identify wines with quality >= 7.0 and calculate percentage",
             "difficulty": "medium"
         }
-    },
-    {
-        "id": "predict_quality_ml_001",
-        "env": {
-            "name": "data_science_tutorial"
-        },
-        "scenario": "predict-wine-quality-ml",
-        "args": {
-            "model_type": "random_forest",
-            "test_size": 0.2
-        },
-        "metadata": {
-            "description": "Build a machine learning model to predict wine quality - requires data preprocessing, feature engineering, model training, and evaluation",
-            "difficulty": "hard"
-        }
     }
 ]
